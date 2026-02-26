@@ -1,0 +1,732 @@
+/* ============================================================
+   Skills Gap Analyzer — Global Stylesheet
+   styles.css
+   ============================================================
+   Table of contents
+   -----------------
+   1. Fonts
+   2. Design tokens (CSS custom properties)
+   3. Base / reset
+   4. Typography helpers
+   5. Layout & card components
+   6. Step badge
+   7. Stat tiles
+   8. Skill pills
+   9. Progress bar
+   10. Divider
+   11. Streamlit widget overrides
+   ============================================================ */
+
+
+/* ── 1. Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+
+/* ── 2. Design tokens ─────────────────────────────────────────────────── */
+:root {
+    /* backgrounds */
+    --bg:           #080c10;
+    --surface:      #0d1117;
+    --surface-2:    #131920;
+
+    /* borders */
+    --border:       rgba(255, 255, 255, 0.07);
+    --border-hover: rgba(255, 255, 255, 0.14);
+
+    /* text */
+    --text-primary: #e8edf2;
+    --text-dim:     #8898a8;
+    --text-muted:   #5c6b7a;
+
+    /* accent — emerald */
+    --accent:       #3ecf8e;
+    --accent-soft:  rgba(62, 207, 142, 0.10);
+    --accent-glow:  rgba(62, 207, 142, 0.20);
+
+    /* semantic colours */
+    --warn:         #f0c040;
+    --warn-soft:    rgba(240, 192,  64, 0.08);
+    --danger:       #f06070;
+    --danger-soft:  rgba(240,  96, 112, 0.08);
+
+    /* shape */
+    --radius:       10px;
+    --radius-lg:    16px;
+
+    /* typography */
+    --font:         'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+
+    /* motion */
+    --ease:         cubic-bezier(0.4, 0, 0.2, 1);
+    --duration:     0.18s;
+    --transition:   var(--duration) var(--ease);
+}
+
+
+/* ── 3. Base / reset ──────────────────────────────────────────────────── */
+html,
+body,
+[class*="css"] {
+    font-family: var(--font) !important;
+}
+
+.stApp {
+    background: radial-gradient(circle at top left, #111827 0, #020617 45%, #000000 100%);
+}
+
+.block-container {
+    padding: 2.5rem 2rem 4rem;
+    max-width: 1180px;
+}
+
+/* Hide default Streamlit chrome */
+#MainMenu,
+footer,
+header {
+    display: none;
+}
+
+
+/* ── 4. Typography helpers ────────────────────────────────────────────── */
+.label {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.headline {
+    font-size: 2.4rem;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+/* Gradient accent word inside headline */
+.headline span {
+    background: linear-gradient(90deg, var(--accent) 0%, #60d4b0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtext {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.65;
+    max-width: 520px;
+}
+
+
+/* ── 5. Layout & card components ──────────────────────────────────────── */
+.card {
+    background: rgba(15, 23, 42, 0.70);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: var(--radius-lg);
+    padding: 1.4rem 1.6rem;
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.95);
+    transition:
+        border-color var(--transition),
+        transform    var(--transition),
+        box-shadow   var(--transition);
+}
+
+.card:hover {
+    border-color: rgba(148, 163, 184, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 1);
+}
+
+/* Inline success / active-job indicator strip */
+.job-active-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+}
+
+.job-active-strip .tick {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.job-active-strip .job-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.88rem;
+}
+
+.job-active-strip .job-company {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-left: 0.5rem;
+}
+
+/* Resume upload confirmation strip */
+.resume-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+}
+
+.resume-strip .filename {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.resume-strip .char-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: auto;
+    font-family: var(--font-mono);
+}
+
+
+/* ── 6. Step badge ────────────────────────────────────────────────────── */
+.step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.step-badge::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: var(--accent);
+}
+
+
+/* ── 7. Stat tiles ────────────────────────────────────────────────────── */
+.stat {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    transition:
+        transform  var(--transition),
+        box-shadow var(--transition);
+}
+
+.stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    line-height: 1;
+    margin: 0.2rem 0;
+}
+
+.stat-pct {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+
+/* ── 8. Skill pills ───────────────────────────────────────────────────── */
+.pills-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: default;
+    white-space: nowrap;
+    transition:
+        transform var(--transition),
+        filter    var(--transition);
+}
+
+.pill:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.15);
+}
+
+/* Pill variants */
+.pill-strong  { background: var(--accent-soft); border-color: var(--accent); color: #a8f0d0; }
+.pill-partial { background: var(--warn-soft);   border-color: var(--warn);   color: #fce9a4; }
+.pill-missing { background: var(--danger-soft); border-color: var(--danger); color: #fcc8cc; }
+
+/* Coloured dot inside each pill */
+.pill-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.pill-strong .pill-dot  { background: var(--accent); }
+.pill-partial .pill-dot { background: var(--warn);   }
+.pill-missing .pill-dot { background: var(--danger); }
+
+/* Secondary meta text (similarity %, matched skill) */
+.pill-meta {
+    font-size: 0.66rem;
+    opacity: 0.65;
+    font-family: var(--font-mono);
+}
+
+
+/* ── 9. Progress bar ──────────────────────────────────────────────────── */
+.progress-wrap {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background-image: linear-gradient(90deg, #22c55e, #0ea5e9, #6366f1);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    transition: width 0.6s var(--ease);
+}
+
+/* Skeleton loading lines */
+.skeleton-line {
+    width: 100%;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: linear-gradient(110deg, #020617 0%, #1e293b 40%, #020617 80%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-block {
+    border-radius: var(--radius);
+    background: linear-gradient(110deg, #020617 0%, #1e293b 40%, #020617 80%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+
+/* ── 10. Divider ──────────────────────────────────────────────────────── */
+.divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2rem 0;
+}
+
+
+/* ── 10b. Next steps & recommended skills ──────────────────────────────── */
+.next-steps-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+    backdrop-filter: blur(10px); /* Added for sleekness */
+}
+
+.next-steps-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.next-steps-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    line-height: 1.7;
+}
+
+.next-steps-list li {
+    margin-bottom: 0.35rem;
+}
+
+.next-steps-list li::marker {
+    color: var(--accent);
+}
+
+.recommended-skills-block {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.recommended-skills-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.recommended-skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+    .recommended-skills-grid { grid-template-columns: 1fr; }
+}
+
+.rec-column {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    backdrop-filter: blur(5px);
+}
+
+.rec-column-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.rec-column-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+
+.rec-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+/* REFINED INTERACTIVE ROW */
+.rec-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    /* High-end smooth transition */
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* MICRO-INTERACTION: SLIDE AND GLOW */
+.rec-row:hover {
+    transform: translateX(8px);
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.rec-row.rec-partial {
+    background: var(--warn-soft);
+    border: 1px solid rgba(240, 192, 64, 0.15);
+}
+
+.rec-row.rec-partial:hover {
+    border-color: var(--warn) !important;
+    box-shadow: inset 0 0 10px rgba(240, 192, 64, 0.1), 0 5px 15px rgba(0,0,0,0.4);
+}
+
+.rec-row.rec-missing {
+    background: var(--danger-soft);
+    border: 1px solid rgba(240, 96, 112, 0.15);
+}
+
+.rec-row.rec-missing:hover {
+    border-color: var(--danger) !important;
+    box-shadow: inset 0 0 10px rgba(240, 96, 112, 0.1), 0 5px 15px rgba(0,0,0,0.4);
+}
+
+.rec-skill {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rec-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.rec-row:hover .rec-hint {
+    opacity: 1;
+    color: var(--text-primary);
+}
+
+.rec-empty {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+}
+
+/* ── 11. Streamlit widget overrides ───────────────────────────────────── */
+
+/* Text inputs & text areas */
+.stTextInput  > div > div > input,
+.stTextArea   > div > div > textarea,
+.stSelectbox  > div > div {
+    background:  var(--surface-2)  !important;
+    border:      1px solid var(--border) !important;
+    border-radius: var(--radius)   !important;
+    color:       var(--text-primary) !important;
+    font-family: var(--font) !important;
+    transition:  border-color var(--transition) !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea  > div > div > textarea:focus {
+    border-color: var(--accent)    !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important;
+}
+
+/* Primary action button */
+.stButton > button {
+    background:    var(--accent)  !important;
+    color:         #051a0f        !important;
+    border:        none           !important;
+    border-radius: 999px          !important;
+    padding:       0.45rem 1.5rem !important;
+    font-weight:   600            !important;
+    font-family:   var(--font)    !important;
+    font-size:     0.85rem        !important;
+    letter-spacing: 0.02em        !important;
+    transition:
+        transform   var(--transition),
+        box-shadow  var(--transition) !important;
+}
+
+.stButton > button:hover {
+    transform:  translateY(-1px) !important;
+    box-shadow: 0 6px 24px var(--accent-glow) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* File uploader drop zone */
+[data-testid="stFileUploadDropzone"] {
+    background:    var(--surface-2) !important;
+    border:        1px dashed var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    transition:    border-color var(--transition) !important;
+}
+
+[data-testid="stFileUploadDropzone"]:hover {
+    border-color: var(--accent) !important;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background:    var(--surface) !important;
+    border:        1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+}
+
+/* Dataframe */
+[data-testid="stDataFrame"] {
+    border-radius: var(--radius) !important;
+}
+
+/* All widget labels */
+label,
+.stSelectbox    label,
+.stTextInput    label,
+.stTextArea     label,
+.stFileUploader label,
+.stSlider       label {
+    font-size:      0.78rem  !important;
+    font-weight:    500      !important;
+    color:          var(--text-dim) !important;
+    letter-spacing: 0.02em   !important;
+}
+
+/* Alert / info / warning / error banners */
+.stAlert {
+    border-radius: var(--radius) !important;
+}
+
+/* ── 12. NEW: Premium Gap Dashboard Components (For image_158c78.png) ── */
+.gap-dashboard-container {
+    margin-top: 2rem;
+    padding: 1rem 0;
+}
+
+.gap-tile-card {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    height: 100%;
+    transition: all 0.4s var(--ease);
+    backdrop-filter: blur(12px);
+}
+
+.gap-tile-card:hover {
+    border-color: var(--accent) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+}
+
+.gap-tile-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+}
+
+.gap-list-item {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 0.8rem;
+    line-height: 1.4;
+    display: flex;
+    gap: 10px;
+}
+
+.gap-list-item::before {
+    content: "•";
+    color: var(--accent);
+}
+
+/* ── 13. Entrance Animations ────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+        filter: blur(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+/* Base class for animated elements */
+.animate-in {
+    animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* Staggered Delays for a "Waterfall" effect */
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+
+/* Pulse effect for the "Generate" button to make it feel "Alive" */
+.stButton > button {
+    position: relative;
+    overflow: hidden;
+}
+
+.stButton > button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stButton > button:hover::after {
+    opacity: 1;
+}
+
+/* ── 14. Skeleton Loader Shimmer ────────────────────────────────────── */
+.skeleton-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.shimmer {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-swipe 1.5s infinite linear;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+@keyframes shimmer-swipe {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton-line {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
