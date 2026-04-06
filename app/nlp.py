@@ -6,7 +6,7 @@ from typing import Iterable, List, Sequence, Tuple
 
 import numpy as np
 import spacy
-from sentence_transformers import SentenceTransformer, util as st_util
+from sentence_transformers import SentenceTransformer
 
 from .config import CONFIG
 
@@ -54,9 +54,23 @@ COMMON_SKILLS = {
     "time management",
 }
 
+MAX_CANDIDATE_SKILLS = 320
+MAX_JOB_SKILLS_FOR_MATCHING = 300
+MAX_RESUME_SKILLS_FOR_MATCHING = 420
+
 
 def _normalize_skill(text: str) -> str:
     return " ".join(text.lower().strip().split())
+
+
+def _is_reasonable_skill_candidate(text: str) -> bool:
+    if len(text) < 2 or len(text) > 64:
+        return False
+    if text.count(" ") > 7:
+        return False
+    if not any(ch.isalpha() for ch in text):
+        return False
+    return True
 
 
 def extract_skills_from_text(text: str) -> List[str]:
@@ -82,7 +96,7 @@ def extract_skills_from_text(text: str) -> List[str]:
     # Noun chunks and entities as additional candidates
     for chunk in doc.noun_chunks:
         normalized = _normalize_skill(chunk.text)
-        if len(normalized) < 3:
+        if not _is_reasonable_skill_candidate(normalized):
             continue
         if any(ch.isdigit() for ch in normalized):
             continue
@@ -90,11 +104,15 @@ def extract_skills_from_text(text: str) -> List[str]:
 
     for ent in doc.ents:
         normalized = _normalize_skill(ent.text)
-        if len(normalized) < 3:
+        if not _is_reasonable_skill_candidate(normalized):
             continue
         candidates.add(normalized)
 
-    return sorted(candidates)
+    ordered = sorted(candidates)
+    common_hits = [s for s in ordered if s in COMMON_SKILLS]
+    others = [s for s in ordered if s not in COMMON_SKILLS]
+    others.sort(key=lambda s: (s.count(" "), len(s), s))
+    return (common_hits + others)[:MAX_CANDIDATE_SKILLS]
 
 
 @dataclass
@@ -112,17 +130,32 @@ class SkillMatch:
         return "missing"
 
 
-def _encode_sentences(sentences: Sequence[str]) -> np.ndarray:
+@lru_cache(maxsize=128)
+def _encode_sentences_cached(sentences: Tuple[str, ...]) -> np.ndarray:
     model = get_sentence_transformer()
-    return model.encode(list(sentences), convert_to_tensor=True, normalize_embeddings=True)
+    return model.encode(
+        list(sentences),
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
+
+
+def _encode_sentences(sentences: Sequence[str]) -> np.ndarray:
+    return _encode_sentences_cached(tuple(sentences))
 
 
 def compute_skill_matches(
     job_skills: Sequence[str],
     resume_skills: Sequence[str],
 ) -> List[SkillMatch]:
-    job_skills = [s for s in {_normalize_skill(s) for s in job_skills} if s]
-    resume_skills = [s for s in {_normalize_skill(s) for s in resume_skills} if s]
+    def _prepare(skills: Sequence[str], limit: int) -> List[str]:
+        cleaned = [s for s in {_normalize_skill(s) for s in skills} if _is_reasonable_skill_candidate(s)]
+        cleaned.sort(key=lambda s: (s.count(" "), len(s), s))
+        return cleaned[:limit]
+
+    job_skills = _prepare(job_skills, MAX_JOB_SKILLS_FOR_MATCHING)
+    resume_skills = _prepare(resume_skills, MAX_RESUME_SKILLS_FOR_MATCHING)
 
     if not job_skills:
         return []
@@ -136,7 +169,7 @@ def compute_skill_matches(
     job_emb = _encode_sentences(job_skills)
     resume_emb = _encode_sentences(resume_skills)
 
-    cosine_scores = st_util.cos_sim(job_emb, resume_emb).cpu().numpy()
+    cosine_scores = np.matmul(job_emb, resume_emb.T)
 
     matches: List[SkillMatch] = []
     for i, job_skill in enumerate(job_skills):
