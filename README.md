@@ -41,11 +41,9 @@ An **NLP capstone project** that compares a job description to your resume and s
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/job-skills-gap-analyzer.git
+git clone https://github.com/jjayytm/job-skills-gap-analyzer.git
 cd job-skills-gap-analyzer
 ```
-
-> **Note:** Replace `YOUR_USERNAME` with your GitHub username when you create the repo.
 
 ### 2. Create a virtual environment (recommended)
 
@@ -154,12 +152,6 @@ job-skills-gap-analyzer/
 3. Set **Main file path** to `app.py`.
 4. Add **Secrets** → `OPENAI_API_KEY` = your key.
 5. Deploy. No need to install spaCy model manually; add `en_core_web_sm` to `requirements.txt` or a `packages.txt` if your host requires it.
-
----
-
-## License
-
-MIT (or your chosen license).
 
 ---
 
