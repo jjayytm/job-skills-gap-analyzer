@@ -448,7 +448,7 @@ def _render_results(
             "Similarity": round(m.similarity, 3),
             "Coverage": m.coverage_label
         } for m in matches])
-        st.dataframe(df, width="stretch")
+        st.dataframe(df, use_container_width=True)
 
 
 def main() -> None:
