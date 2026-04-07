@@ -19,14 +19,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
-# [cite_start]Load .env from project root (OPENAI_API_KEY, etc.) — .env is in .gitignore [cite: 570-571]
+# Load .env from project root (ANTHROPIC_API_KEY, etc.) — .env is in .gitignore
 _load_env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_load_env_path)
 
 from app.config import CONFIG
 from app.llm import (
-    OPENAI_API_KEY_ENV,
-    get_openai_status,
+    ANTHROPIC_API_KEY_ENV,
     get_resume_rewrite_suggestions,
     get_skill_recommendations,
 )
@@ -53,6 +52,19 @@ def _load_css() -> None:
     if CSS_FILE.is_file():
         css = CSS_FILE.read_text(encoding="utf-8")
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+def _intro_splash() -> None:
+    """
+    One-time fullscreen logo intro (aurum-opt–style), aligned with emerald/dark theme.
+    Injects into the parent document; overlay removes itself after the animation.
+    """
+    if st.query_params.get("nosplash") == "1":
+        st.session_state["_skillsync_intro_done"] = True
+    if st.session_state.get("_skillsync_intro_done"):
+        return
+    st.session_state["_skillsync_intro_done"] = True
+    components.html(T.intro_splash_component_html(), height=0, scrolling=False)
 
 
 def _hero() -> None:
@@ -180,7 +192,6 @@ def _step_analysis(job: JobPosting | None, resume_text: str) -> None:
         st.session_state["analysis_matches"] = matches
         st.session_state["analysis_summary"] = summary
         st.session_state["scroll_to_analysis_results"] = True
-        st.session_state["scroll_to_top_skills"] = True
 
     if st.session_state.get("analysis_ready"):
         matches = st.session_state.get("analysis_matches", [])
@@ -216,9 +227,9 @@ def _scroll_to_element(element_id: str) -> None:
             } catch (e) {}
             if (typeof scrollToEl.n === 'undefined') scrollToEl.n = 0;
             scrollToEl.n++;
-            if (scrollToEl.n < 10) setTimeout(scrollToEl, 120);
+            if (scrollToEl.n < 20) setTimeout(scrollToEl, 150);
         })();
-        setTimeout(scrollToEl, 250);
+        setTimeout(scrollToEl, 400);
         </script>
         """,
         height=0,
@@ -232,26 +243,24 @@ def _render_results(
     summary: dict,
     resume_text: str,
 ) -> None:
-    st.markdown('<div id="analysis-results-anchor"></div>', unsafe_allow_html=True)
-
-    # 1. Results Header & Primary Stats
+    # 1. Results Header & Primary Stats (scroll anchor is on header wrapper in templates)
     st.markdown(T.results_header(job.title), unsafe_allow_html=True)
-    # If user just clicked "Analyse skills gap", scroll to this header
-    if st.session_state.pop("scroll_to_analysis_results", False):
-        _scroll_to_element("analysis-results-anchor")
-    
+
     tile_config = [
         ("Strong match",  "strong",  "var(--accent)"),
         ("Partial match", "partial", "var(--warn)"),
         ("Missing",       "missing", "var(--danger)"),
     ]
-    
+
     cols = st.columns(3)
     for col, (title, label, color) in zip(cols, tile_config):
         count = summary["counts"][label]
         pct = summary["percentages"][label] * 100
         with col:
             st.markdown(T.stat_tile(title, count, pct, color), unsafe_allow_html=True)
+
+    if st.session_state.pop("scroll_to_analysis_results", False):
+        _scroll_to_element("analysis-results-anchor")
 
     st.markdown(T.spacer(1.5), unsafe_allow_html=True)
 
@@ -300,11 +309,15 @@ def _render_results(
     st.markdown(T.next_steps_card(steps), unsafe_allow_html=True)
 
     # Load API Key logic
-    if OPENAI_API_KEY_ENV not in os.environ:
+    if ANTHROPIC_API_KEY_ENV not in os.environ:
         try:
-            key = getattr(st.secrets, OPENAI_API_KEY_ENV, None) or (st.secrets.get(OPENAI_API_KEY_ENV) if hasattr(st.secrets, "get") else None)
-            if key: os.environ[OPENAI_API_KEY_ENV] = str(key)
-        except Exception: pass
+            key = getattr(st.secrets, ANTHROPIC_API_KEY_ENV, None) or (
+                st.secrets.get(ANTHROPIC_API_KEY_ENV) if hasattr(st.secrets, "get") else None
+            )
+            if key:
+                os.environ[ANTHROPIC_API_KEY_ENV] = str(key)
+        except Exception:
+            pass
 
     partial_list = summary.get("partial", [])
     missing_list = summary.get("missing", [])
@@ -453,6 +466,7 @@ def _render_results(
 
 def main() -> None:
     _load_css()
+    _intro_splash()
     _hero()
     st.markdown(T.divider(), unsafe_allow_html=True)
     col_left, col_right = st.columns([1.55, 1.45], gap="large")

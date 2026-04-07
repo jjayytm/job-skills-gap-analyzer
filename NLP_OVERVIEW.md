@@ -134,7 +134,7 @@ The UI uses this to power:
 
 ### 4. LLM Layer on Top of NLP (`app/llm.py`)
 
-The classical NLP above is deterministic and explainable. On top of that, the app uses LLMs for two higher-level tasks:
+The classical NLP above is deterministic and explainable. On top of that, the app calls the **Anthropic Messages API** (Claude) for two higher-level tasks:
 
 #### 4.1 Skill Recommendations (`get_skill_recommendations`)
 

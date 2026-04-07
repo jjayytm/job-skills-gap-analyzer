@@ -1,6 +1,6 @@
 # Job Posting Skills Gap Analyzer
 
-An **NLP capstone project** that compares a job description to your resume and shows where you stand: which skills are covered, partially covered, or missing. It uses semantic similarity (sentence-transformers) and optional AI (OpenAI) for actionable recommendations and resume rewrite suggestions.
+An **NLP capstone project** that compares a job description to your resume and shows where you stand: which skills are covered, partially covered, or missing. It uses semantic similarity (sentence-transformers) and optional AI (Anthropic Claude) for actionable recommendations and resume rewrite suggestions.
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.41+-red.svg)
@@ -17,8 +17,8 @@ An **NLP capstone project** that compares a job description to your resume and s
   - **Partial match** — related but could be strengthened
   - **Missing** — not clearly present
 - **Adjustable thresholds** — in the UI (Advanced section) you can tune the strong/partial similarity thresholds before running analysis.
-- **AI recommendations** — “Top skills to add or strengthen” with short, actionable hints (OpenAI).
-- **AI resume rewrite suggestions** — copy-ready bullets and gap summary aligned to the role (OpenAI); never invents facts.
+- **AI recommendations** — “Top skills to add or strengthen” with short, actionable hints (Anthropic Claude).
+- **AI resume rewrite suggestions** — copy-ready bullets and gap summary aligned to the role (Claude); never invents facts.
 - **Dark, modern UI** — glassmorphism, skeleton loading, and smooth auto-scroll to results.
 
 ---
@@ -30,7 +30,7 @@ An **NLP capstone project** that compares a job description to your resume and s
 | UI | Streamlit |
 | NLP / parsing | spaCy (`en_core_web_sm`) |
 | Semantic similarity | sentence-transformers (`all-MiniLM-L6-v2`) |
-| AI suggestions | OpenAI API (gpt-4o-mini or configurable) |
+| AI suggestions | Anthropic API (Claude; model configurable via `ANTHROPIC_MODEL`) |
 | Resume parsing | PyPDF2, python-docx |
 | Config | python-dotenv, `app/config.py` |
 
@@ -69,7 +69,7 @@ python -m spacy download en_core_web_sm
 
 ### 5. Environment variables (for AI features)
 
-Copy the example env file and add your OpenAI API key:
+Copy the example env file and add your Anthropic API key:
 
 ```bash
 cp .env.example .env
@@ -78,10 +78,12 @@ cp .env.example .env
 Edit `.env`:
 
 ```
-OPENAI_API_KEY=sk-your-openai-api-key-here
+ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-Without `OPENAI_API_KEY`, the app still runs; skill matching and stats work, but “Top skills to add or strengthen” and “AI resume rewrite suggestions” will show an error until the key is set.
+Optional: set `ANTHROPIC_MODEL` to a different [Claude model id](https://docs.anthropic.com/en/docs/about-claude/models) (default is set in `app/llm.py`).
+
+Without `ANTHROPIC_API_KEY`, the app still runs; skill matching and stats work, but “Top skills to add or strengthen” and “AI resume rewrite suggestions” will show an error until the key is set.
 
 ---
 
@@ -107,7 +109,7 @@ Then open the URL shown in the terminal (usually `http://localhost:8501`).
 
 3. **Step 03 — Analyse**  
    (Optional) Open **Advanced: adjust similarity thresholds** and change the strong/partial thresholds if you want.  
-   Click **Analyse skills gap**. The page auto-scrolls to the results (job title, stats, covered/partial/missing skills). After AI recommendations load, it scrolls to “Top skills to add or strengthen.”
+   Click **Analyse skills gap**. The page auto-scrolls so **Results for** and the Strong / Partial / Missing stat tiles are at the top. Scroll down for skill pills and AI recommendations.
 
 4. **Resume rewrite (optional)**  
    Scroll to **AI resume rewrite suggestions**, click **Generate resume rewrite suggestions**, and wait for the skeleton loader. When done, you’ll see a gap summary and copy-ready bullets; the view auto-scrolls to the result.
@@ -125,7 +127,7 @@ job-skills-gap-analyzer/
 │   ├── streamlit_ui.py    # Streamlit layout, steps, and widgets
 │   ├── templates.py       # HTML snippets (hero, cards, pills)
 │   ├── nlp.py             # Skill extraction, matching, summarize_gap
-│   ├── llm.py             # OpenAI: skill recommendations + resume rewrite
+│   ├── llm.py             # Anthropic (Claude): skill recommendations + resume rewrite
 │   ├── resume_parser.py  # PDF/DOCX/TXT text extraction
 │   └── models.py         # JobPosting dataclass
 ├── static/
@@ -141,7 +143,7 @@ job-skills-gap-analyzer/
 ## Configuration
 
 - **Similarity thresholds** — Defaults are in `app/config.py` (`similarity_threshold_strong`, `similarity_threshold_partial`). Users can override them in the app via **Advanced: adjust similarity thresholds** before each analysis.
-- **OpenAI** — API key from `.env` or Streamlit secrets. Model and limits are set in `app/llm.py`.
+- **Anthropic** — API key from `.env` or Streamlit secrets (`ANTHROPIC_API_KEY`). Optional `ANTHROPIC_MODEL`; defaults and token limits are in `app/llm.py`.
 
 ---
 
@@ -150,7 +152,7 @@ job-skills-gap-analyzer/
 1. Push the repo to GitHub.
 2. In [Streamlit Community Cloud](https://share.streamlit.io), create a new app and point it to this repo.
 3. Set **Main file path** to `app.py`.
-4. Add **Secrets** → `OPENAI_API_KEY` = your key.
+4. Add **Secrets** → `ANTHROPIC_API_KEY` = your key (and optionally `ANTHROPIC_MODEL`).
 5. Deploy. No need to install spaCy model manually; add `en_core_web_sm` to `requirements.txt` or a `packages.txt` if your host requires it.
 
 ---
@@ -160,6 +162,6 @@ job-skills-gap-analyzer/
 - **spaCy** — NLP and dependency parsing  
 - **sentence-transformers** — Semantic embeddings  
 - **Streamlit** — Web UI  
-- **OpenAI** — Skill and resume suggestion APIs  
+- **Anthropic** — Skill and resume suggestion APIs (Claude)  
 
 Built as an NLP capstone / career-readiness project.

@@ -7,6 +7,9 @@ LLM-powered recommendations for the resume gap report.
 - Resume rewrite suggestions: returns structured JSON (copy/paste friendly) for
   suggested bullets grouped by role + gap summary.
 
+Uses the Anthropic API (Claude). Set ANTHROPIC_API_KEY; optional ANTHROPIC_MODEL
+overrides the default model id.
+
 Notes:
 - Never invent employers, titles, dates, tools, or achievements.
 - Use placeholders like [X%] / [metric] when impact data is missing.
@@ -24,8 +27,11 @@ from app.nlp import SkillMatch
 # Config
 # ---------------------------------------------------------------------------
 
-OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
-DEFAULT_MODEL = "gpt-4o-mini"
+ANTHROPIC_API_KEY_ENV = "ANTHROPIC_API_KEY"
+# Fast, cost-effective; see https://docs.anthropic.com/en/docs/about-claude/models
+# (Older ids like claude-3-5-haiku-20241022 may 404 on the current API.)
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"          # skill recommendations: fast, cheap, JSON-heavy
+DEFAULT_MODEL_REWRITE = "claude-sonnet-4-6"          # resume rewrites: better reasoning needed
 
 MAX_JOB_DESC_CHARS = 6000
 MAX_RESUME_CHARS = 12000
@@ -55,13 +61,27 @@ def _load_env() -> None:
 def _get_key() -> str:
     """Return the API key (empty if missing or placeholder)."""
     _load_env()
-    key = (os.environ.get(OPENAI_API_KEY_ENV) or "").strip().strip('"').strip("'")
-    if not key or key.lower() in ("none", "your-key", "sk-your-openai-api-key-here"):
+    key = (os.environ.get(ANTHROPIC_API_KEY_ENV) or "").strip().strip('"').strip("'")
+    placeholders = (
+        "none",
+        "your-key",
+        "sk-your-anthropic-api-key-here",
+        "your-anthropic-api-key-here",
+    )
+    if not key or key.lower() in placeholders:
         return ""
     return key
 
 
-def get_openai_status() -> dict:
+def _resolved_model(explicit: str | None) -> str:
+    if explicit and explicit.strip():
+        return explicit.strip()
+    _load_env()
+    env_model = (os.environ.get("ANTHROPIC_MODEL") or "").strip()
+    return env_model or DEFAULT_MODEL
+
+
+def get_llm_status() -> dict:
     """
     For debugging: return status of .env and API key (never the key value).
     Keys: env_path, env_exists, cwd, key_set
@@ -79,13 +99,41 @@ def get_openai_status() -> dict:
 
 def _get_client():
     try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
         return None
     key = _get_key()
     if not key:
         return None
-    return OpenAI(api_key=key)
+    return Anthropic(api_key=key)
+
+
+def _anthropic_text_response(
+    client,
+    *,
+    model: str,
+    system: str,
+    user: str,
+    max_tokens: int,
+    temperature: float | None = None,
+) -> str:
+    """Run a single user turn with optional system prompt; return assistant text."""
+    kwargs: dict = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    msg = client.messages.create(**kwargs)
+    blocks = getattr(msg, "content", None) or []
+    parts: list[str] = []
+    for block in blocks:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(text)
+    return "".join(parts).strip()
 
 
 def _strip_code_fences(text: str) -> str:
@@ -178,21 +226,20 @@ def get_skill_recommendations(
     """
     client = _get_client()
     if not client:
-        return [], [], "No API key. Set OPENAI_API_KEY in environment or in Streamlit secrets to enable AI recommendations."
+        return [], [], "No API key. Set ANTHROPIC_API_KEY in environment or in Streamlit secrets to enable AI recommendations."
 
     prompt = _build_skill_prompt(job_title, job_description, partial_matches, missing_matches)
+    use_model = _resolved_model(model)
 
     try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You output only valid JSON. No markdown code blocks, no extra text."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.3,
+        text = _anthropic_text_response(
+            client,
+            model=use_model,
+            system="You output only valid JSON. No markdown code blocks, no extra text.",
+            user=prompt,
             max_tokens=1500,
+            temperature=0.3,
         )
-        text = (resp.choices[0].message.content or "").strip()
         data = _safe_json_load(text)
 
         strengthen = [
@@ -221,7 +268,7 @@ def get_resume_rewrite_suggestions(
     job_title: str,
     job_description: str,
     resume_text: str,
-    model: str = DEFAULT_MODEL,
+    model: str = DEFAULT_MODEL_REWRITE,
 ) -> tuple[str, str | None]:
     """
     LLM as senior resume strategist: returns structured JSON for:
@@ -238,7 +285,7 @@ def get_resume_rewrite_suggestions(
     """
     client = _get_client()
     if not client:
-        return "", "No API key. Set OPENAI_API_KEY to enable AI resume suggestions."
+        return "", "No API key. Set ANTHROPIC_API_KEY to enable AI resume suggestions."
 
     job_desc = (job_description or "")[:MAX_JOB_DESC_CHARS]
     resume_excerpt = (resume_text or "")[:MAX_RESUME_CHARS]
@@ -290,20 +337,17 @@ Description:
 {resume_excerpt}
 """
 
+    use_model = _resolved_model(model)
+
     try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Return only valid JSON. Do not invent employers, titles, dates, tools, or achievements.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.35,
+        text = _anthropic_text_response(
+            client,
+            model=use_model,
+            system="Return only valid JSON. Do not invent employers, titles, dates, tools, or achievements.",
+            user=prompt,
             max_tokens=2500,
+            temperature=0.35,
         )
-        text = (resp.choices[0].message.content or "").strip()
         data = _safe_json_load(text)
 
         # Normalize to a stable JSON string (pretty-printed) for UI parsing/debugging
