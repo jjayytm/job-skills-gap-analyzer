@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterable, List, Sequence, Tuple
+from typing import Any, Iterable, List, Sequence, Tuple
 
 import numpy as np
 import spacy
@@ -12,12 +12,14 @@ from .config import CONFIG
 
 
 @lru_cache(maxsize=1)
-def get_spacy_model():
+def get_spacy_model() -> Any:
+    """Load and cache the spaCy model defined in AppConfig (default: en_core_web_sm)."""
     return spacy.load(CONFIG.nlp.spacy_model)
 
 
 @lru_cache(maxsize=1)
-def get_sentence_transformer():
+def get_sentence_transformer() -> SentenceTransformer:
+    """Load and cache the Sentence Transformer model defined in AppConfig (default: all-MiniLM-L6-v2)."""
     return SentenceTransformer(CONFIG.nlp.sentence_transformer_model)
 
 
@@ -60,10 +62,12 @@ MAX_RESUME_SKILLS_FOR_MATCHING = 420
 
 
 def _normalize_skill(text: str) -> str:
+    """Lowercase and collapse internal whitespace in a skill string."""
     return " ".join(text.lower().strip().split())
 
 
 def _is_reasonable_skill_candidate(text: str) -> bool:
+    """Return True if the text looks like a plausible skill phrase (length and content checks)."""
     if len(text) < 2 or len(text) > 64:
         return False
     if text.count(" ") > 7:
@@ -117,12 +121,15 @@ def extract_skills_from_text(text: str) -> List[str]:
 
 @dataclass
 class SkillMatch:
+    """Holds the result of matching one job skill against the best resume skill."""
+
     job_skill: str
     best_resume_skill: str | None
     similarity: float
 
     @property
     def coverage_label(self) -> str:
+        """Return 'strong', 'partial', or 'missing' based on cosine similarity thresholds."""
         if self.similarity >= CONFIG.nlp.similarity_threshold_strong:
             return "strong"
         if self.similarity >= CONFIG.nlp.similarity_threshold_partial:
@@ -132,6 +139,7 @@ class SkillMatch:
 
 @lru_cache(maxsize=128)
 def _encode_sentences_cached(sentences: Tuple[str, ...]) -> np.ndarray:
+    """Encode a tuple of sentences into L2-normalized embedding vectors (cached by input)."""
     model = get_sentence_transformer()
     return model.encode(
         list(sentences),
@@ -142,6 +150,7 @@ def _encode_sentences_cached(sentences: Tuple[str, ...]) -> np.ndarray:
 
 
 def _encode_sentences(sentences: Sequence[str]) -> np.ndarray:
+    """Convert a sequence of strings to a cached numpy embedding matrix."""
     return _encode_sentences_cached(tuple(sentences))
 
 
@@ -149,7 +158,15 @@ def compute_skill_matches(
     job_skills: Sequence[str],
     resume_skills: Sequence[str],
 ) -> List[SkillMatch]:
+    """
+    Compute pairwise cosine similarity between job skills and resume skills.
+
+    Each job skill is matched to the highest-scoring resume skill above the
+    applicable threshold and wrapped in a SkillMatch dataclass. L2-normalized
+    embeddings allow cosine similarity via simple matrix multiplication.
+    """
     def _prepare(skills: Sequence[str], limit: int) -> List[str]:
+        """Deduplicate, normalize, filter, and cap a skill list to `limit` entries."""
         cleaned = [s for s in {_normalize_skill(s) for s in skills} if _is_reasonable_skill_candidate(s)]
         cleaned.sort(key=lambda s: (s.count(" "), len(s), s))
         return cleaned[:limit]
@@ -188,6 +205,11 @@ def compute_skill_matches(
 
 
 def summarize_gap(matches: Iterable[SkillMatch]) -> dict:
+    """
+    Aggregate SkillMatch results into counts, percentages, and grouped lists.
+
+    Returns a dict with keys: counts, percentages, strong, partial, missing.
+    """
     matches = list(matches)
     strong = [m for m in matches if m.coverage_label == "strong"]
     partial = [m for m in matches if m.coverage_label == "partial"]

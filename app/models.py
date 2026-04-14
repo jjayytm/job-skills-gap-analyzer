@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 @dataclass
 class JobPosting:
+    """Represents a single job posting with its metadata and full description text."""
+
     title: str
     company: str
     location: str

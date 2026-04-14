@@ -1,25 +1,66 @@
-# Environment and secrets (do not commit)
+# Environment & secrets
 .env
 .env.local
-.streamlit/secrets.toml
+.env.*.local
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Virtual environments
 .venv/
 venv/
-*.egg-info/
-.eggs/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
 dist/
 build/
-
-# IDE / OS
-.idea/
-.vscode/
-.DS_Store
-Thumbs.db
+*.egg-info/
+*.egg
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb_checkpoints
+
+# ML model caches (downloaded at runtime)
+.cache/
+sentence_transformers/
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Logs & temp
+*.log
+*.tmp
+*.bak
+
+# Word temporary lock files
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
+# Claude Code internal files
+.claude/
+
+# Report & demo files — submitted separately, not part of the codebase
+SkillSync_NLP_Project_Report.docx
+SkillSync_NLP_Project_Report_new.docx
+SkillSync_NLP_Project_Report_*.docx
+resume_data_scientist.docx
+
+# Assignment brief (not part of codebase)
+NLP_Final_Project_Guidelines.pdf

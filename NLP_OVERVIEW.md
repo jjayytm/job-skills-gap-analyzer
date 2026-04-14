@@ -1,6 +1,6 @@
 ## NLP Pipeline Overview
 
-This app’s NLP pipeline turns raw text (job descriptions and resumes) into a structured **skills gap analysis**. The core logic lives in `app/nlp.py`, with LLM helpers in `app/llm.py`.
+This app's NLP pipeline turns raw text (job descriptions and resumes) into a structured **skills gap analysis**. The core logic lives in `app/nlp.py`, with LLM helpers in `app/llm.py`.
 
 ---
 
@@ -16,7 +16,7 @@ This app’s NLP pipeline turns raw text (job descriptions and resumes) into a s
 **Process**
 
 - **Normalize text**
-  - Lowercase, trim whitespace, collapse multiple spaces.
+  - Lowercase, trim whitespace, collapse multiple spaces (`_normalize_skill`).
 
 - **Direct matches from curated list**
   - `COMMON_SKILLS` contains common technical and soft skills (e.g. `python`, `sql`, `docker`, `communication`, `time management`).
@@ -28,15 +28,17 @@ This app’s NLP pipeline turns raw text (job descriptions and resumes) into a s
   - From `doc`:
     - Take **noun chunks** (`doc.noun_chunks`).
     - Take **named entities** (`doc.ents`).
-  - For each chunk/entity:
-    - Normalize (lowercase, trim).
-    - Discard if:
-      - Length \< 3 characters, or
-      - Contains digits (likely IDs, dates, etc.).
-    - Otherwise add to the candidate set.
+  - Each chunk/entity is normalized then passed through `_is_reasonable_skill_candidate`, which discards if:
+    - Length < 2 characters, or > 64 characters
+    - Contains more than 7 spaces (too long to be a skill)
+    - Contains no alphabetic characters
+  - For **noun chunks only**: also discard if the normalized text contains any digit (likely IDs, dates, version numbers).
+  - Passing candidates are added to the candidate set.
 
-- **Output**
-  - Combine all candidates into a `set` (no duplicates), sort, and return as a `List[str]`.
+- **Output ordering**
+  - `COMMON_SKILLS` hits are listed first (highest signal), then remaining candidates sorted by word count, then length, then alphabetically.
+  - Total candidates capped at `MAX_CANDIDATE_SKILLS = 320`.
+  - Returns a `List[str]`.
 
 ---
 
@@ -57,9 +59,10 @@ This app’s NLP pipeline turns raw text (job descriptions and resumes) into a s
 
 **Process**
 
-- **Normalize & deduplicate**
-  - Both job and resume skill strings are normalized via `_normalize_skill` (lowercase, trimmed, single spaces).
-  - Convert to sets then back to lists to remove duplicates.
+- **Prepare skill lists (`_prepare` inner function)**
+  - Normalizes each skill via `_normalize_skill`, deduplicates using a set, filters with `_is_reasonable_skill_candidate`, and sorts by word count / length.
+  - Job skills capped at `MAX_JOB_SKILLS_FOR_MATCHING = 300`.
+  - Resume skills capped at `MAX_RESUME_SKILLS_FOR_MATCHING = 420`.
 
 - **Edge cases**
   - No job skills → return `[]`.
@@ -68,18 +71,23 @@ This app’s NLP pipeline turns raw text (job descriptions and resumes) into a s
     - `similarity = 0.0`.
 
 - **Sentence embeddings**
-  - Load SentenceTransformer once via `get_sentence_transformer()` (also cached).
-  - Compute embeddings:
+  - Load SentenceTransformer once via `get_sentence_transformer()` (also `@lru_cache`).
+  - Encode via `_encode_sentences_cached` (itself `@lru_cache(maxsize=128)` — repeated identical inputs skip re-encoding):
     - `job_emb = model.encode(job_skills, normalize_embeddings=True)`
     - `resume_emb = model.encode(resume_skills, normalize_embeddings=True)`
+  - `normalize_embeddings=True` produces **L2-normalized** vectors.
 
 - **Cosine similarity matrix**
-  - `cosine_scores = cos_sim(job_emb, resume_emb)` → matrix with one row per job skill and one column per resume skill.
+  - Because both embedding matrices are L2-normalized, cosine similarity reduces to a dot product:
+    ```python
+    cosine_scores = np.matmul(job_emb, resume_emb.T)
+    ```
+  - Result: matrix with one row per job skill and one column per resume skill.
 
 - **Best match per job skill**
   - For each job skill row:
     - Find `best_idx = argmax(row)`.
-    - `best_score = row[best_idx]`.
+    - `best_score = float(row[best_idx])`.
     - Create `SkillMatch(job_skill, resume_skills[best_idx], best_score)`.
 
 **Output**
@@ -127,14 +135,14 @@ This app’s NLP pipeline turns raw text (job descriptions and resumes) into a s
 The UI uses this to power:
 
 - Stat tiles (counts and percentages).
-- Skill “pills” grouped by **covered**, **partially covered**, and **missing**.
+- Skill "pills" grouped by **covered**, **partially covered**, and **missing**.
 - Inputs to the LLM prompts (see next section).
 
 ---
 
 ### 4. LLM Layer on Top of NLP (`app/llm.py`)
 
-The classical NLP above is deterministic and explainable. On top of that, the app uses LLMs for two higher-level tasks:
+The classical NLP above is deterministic and explainable. On top of that, the app calls the **Anthropic Messages API** (Claude Haiku for skill recommendations · Claude Sonnet for resume rewrites) for two higher-level tasks:
 
 #### 4.1 Skill Recommendations (`get_skill_recommendations`)
 
@@ -153,7 +161,7 @@ The classical NLP above is deterministic and explainable. On top of that, the ap
     - A short suggestion for how to reflect it on the resume.
 
 - **UI**
-  - Rendered as “Top skills to add or strengthen” with short, actionable tips.
+  - Rendered as "Top skills to add or strengthen" with short, actionable tips.
 
 #### 4.2 Resume Rewrite Suggestions (`get_resume_rewrite_suggestions`)
 
@@ -190,12 +198,12 @@ The classical NLP above is deterministic and explainable. On top of that, the ap
 ```
 
 - **Output handling**
-  - The raw model response is JSON-parsed and then re-serialized to a stable JSON string for the UI.
+  - The raw model response is stripped of any markdown fences (`_strip_fences`), JSON-parsed, then re-serialized to a stable JSON string for the UI.
 
 - **UI**
   - `gap_summary` → shown as the **Gap Analysis Dashboard**.
-  - `roles[*].suggested_bullets` → “Suggested Bullets (Copy-ready)” per role.
-  - `roles[*].evidence_needed` → “What evidence to add” expanders.
+  - `roles[*].suggested_bullets` → "Suggested Bullets (Copy-ready)" per role.
+  - `roles[*].evidence_needed` → "What evidence to add" expanders.
 
 ---
 
@@ -203,12 +211,11 @@ The classical NLP above is deterministic and explainable. On top of that, the ap
 
 1. User selects or pastes a **job description** and uploads a **resume**.
 2. `extract_skills_from_text` runs on both texts to get job skills and resume skills.
-3. `compute_skill_matches` uses SentenceTransformer + cosine similarity to pair each job skill with the closest resume skill.
+3. `compute_skill_matches` uses SentenceTransformer + L2-normalized dot product (cosine similarity) to pair each job skill with the closest resume skill.
 4. `summarize_gap` groups matches into **strong**, **partial**, and **missing** with counts and percentages.
 5. The Streamlit UI:
    - Shows stats and skill pills.
    - Calls `get_skill_recommendations` to propose prioritized skills to add/strengthen.
-   - Optionally calls `get_resume_rewrite_suggestions` to produce a structured “AI resume rewrite” with copy-ready bullets aligned to the role.
+   - Optionally calls `get_resume_rewrite_suggestions` to produce a structured "AI resume rewrite" with copy-ready bullets aligned to the role.
 
 This combination of transparent NLP and constrained LLM prompts gives you both **explainable metrics** (similarity, coverage labels) and **practical advice** (which skills and bullets to change) for closing the skills gap.
-
