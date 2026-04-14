@@ -142,7 +142,11 @@ The UI uses this to power:
 
 ### 4. LLM Layer on Top of NLP (`app/llm.py`)
 
-The classical NLP above is deterministic and explainable. On top of that, the app calls the **Anthropic Messages API** (Claude Haiku for skill recommendations · Claude Sonnet for resume rewrites) for two higher-level tasks:
+The classical NLP above is deterministic and explainable. On top of that, the app calls the **Anthropic Messages API** for two higher-level tasks:
+
+- **Default model for skill recommendations**: `claude-haiku-4-5-20251001`
+- **Default model for resume rewrites**: `claude-sonnet-4-6`
+- **Override behavior**: if `ANTHROPIC_MODEL` is set (or a `model` argument is passed), `_pick_model(...)` can override defaults.
 
 #### 4.1 Skill Recommendations (`get_skill_recommendations`)
 
@@ -198,7 +202,7 @@ The classical NLP above is deterministic and explainable. On top of that, the ap
 ```
 
 - **Output handling**
-  - The raw model response is stripped of any markdown fences (`_strip_fences`), JSON-parsed, then re-serialized to a stable JSON string for the UI.
+  - The raw model response is cleaned by `_strip_fences`, parsed by `_parse_json`, then re-serialized to a stable JSON string for the UI.
 
 - **UI**
   - `gap_summary` → shown as the **Gap Analysis Dashboard**.
@@ -209,7 +213,7 @@ The classical NLP above is deterministic and explainable. On top of that, the ap
 
 ### 5. End-to-End Flow
 
-1. User selects or pastes a **job description** and uploads a **resume**.
+1. User pastes a **job description** (title/company optional) and uploads a **resume**.
 2. `extract_skills_from_text` runs on both texts to get job skills and resume skills.
 3. `compute_skill_matches` uses SentenceTransformer + L2-normalized dot product (cosine similarity) to pair each job skill with the closest resume skill.
 4. `summarize_gap` groups matches into **strong**, **partial**, and **missing** with counts and percentages.

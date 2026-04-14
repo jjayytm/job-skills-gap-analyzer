@@ -19,7 +19,7 @@ An **NLP capstone project** that semantically compares a job description to your
   - **Strong match** — well covered on your resume
   - **Partial match** — related but could be strengthened
   - **Missing** — not clearly present
-- **Adjustable thresholds** — tune the strong/partial similarity thresholds in the Advanced section before running analysis.
+- **Configurable thresholds** — default strong/partial thresholds are set in `app/config.py` and reflected in matching + UI labels.
 - **AI recommendations** — "Top skills to add or strengthen" with short, actionable hints (Claude Haiku).
 - **AI resume rewrite suggestions** — copy-ready bullets and a gap summary aligned to the role (Claude Sonnet); never invents facts.
 - **Dark, modern UI** — glassmorphism, skeleton loading, and smooth auto-scroll to results.
@@ -121,7 +121,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 Get your key at [https://console.anthropic.com/](https://console.anthropic.com/).
 
-Optional: set `ANTHROPIC_MODEL` to override the default model for skill recommendations.
+Optional: set `ANTHROPIC_MODEL` to override model selection for AI features.
 
 Without `ANTHROPIC_API_KEY` the app still runs — skill matching and stats work fine, but the AI recommendation and resume rewrite sections will show an error until the key is set.
 
@@ -146,7 +146,6 @@ Open the URL shown in the terminal (usually `http://localhost:8501`).
    Upload your resume (PDF, DOCX, or TXT). The app extracts the text automatically.
 
 3. **Step 03 — Analyse**
-   Optionally open **Advanced: adjust similarity thresholds** to tune the match sensitivity.
    Click **Analyse skills gap**. The page auto-scrolls to the results dashboard.
 
 4. **Resume rewrite (optional)**
@@ -180,8 +179,8 @@ job-skills-gap-analyzer/
 
 ## Configuration
 
-- **Similarity thresholds** — Defaults are in `app/config.py` (`similarity_threshold_strong = 0.75`, `similarity_threshold_partial = 0.55`). Users can override them per-analysis via the Advanced section in the UI.
-- **Anthropic** — API key loaded from `.env` or Streamlit secrets (`ANTHROPIC_API_KEY`). Optional `ANTHROPIC_MODEL` overrides the skill-recommendation model. Defaults and token limits are set in `app/llm.py`.
+- **Similarity thresholds** — Defaults are in `app/config.py` (`similarity_threshold_strong = 0.75`, `similarity_threshold_partial = 0.55`).
+- **Anthropic** — API key loaded from `.env` or Streamlit secrets (`ANTHROPIC_API_KEY`). Optional `ANTHROPIC_MODEL` can override model selection for both AI features. Defaults and token limits are set in `app/llm.py`.
 
 ---
 
